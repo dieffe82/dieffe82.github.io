@@ -1,122 +1,133 @@
-const planner = document.getElementById("planner");
-const weekTitle = document.getElementById("week-title");
-const prevWeek = document.getElementById("prev-week");
-const nextWeek = document.getElementById("next-week");
+let plannerData = {};
+const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
+const API_KEY = 'YOUR_API_KEY';
+const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
-let currentDate = new Date(); // Start with today's date
+async function handleCredentialResponse(response) {
+  const user = jwt_decode(response.credential);
+  console.log("User Info:", user);
 
-// Helper to format dates (e.g., "2nd", "3rd")
-const formatDay = (day) => {
-    if (day > 3 && day < 21) return `${day}th`;
-    switch (day % 10) {
-        case 1: return `${day}st`;
-        case 2: return `${day}nd`;
-        case 3: return `${day}rd`;
-        default: return `${day}th`;
-    }
-};
+  // Initialize Google Sheets API after login
+  await initializeSheetsAPI();
+  await loadWeeklyPlanner(getCurrentWeekRange());
+}
 
-// Helper to get the start and end of the current week
-const getWeekRange = (date) => {
-    const monday = new Date(date);
-    monday.setDate(date.getDate() - date.getDay() + 1); // Adjust to Monday
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6); // Adjust to Sunday
+// Initialize Google Sheets API
+async function initializeSheetsAPI() {
+  await gapi.load('client');
+  await gapi.client.init({
+    apiKey: API_KEY,
+    discoveryDocs: [DISCOVERY_DOC],
+  });
+  console.log('Google Sheets API Initialized');
+}
 
-    return {
-        start: monday,
-        end: sunday,
-    };
-};
-
-// Format the week title (e.g., "2nd to 8th December")
-const formatWeekTitle = ({ start, end }) => {
-    const options = { month: "long" }; // Format to get month name
-    return `${formatDay(start.getDate())} to ${formatDay(end.getDate())} ${start.toLocaleDateString("en-US", options)}`;
-};
-
-// Load planner for the current week
-const loadPlanner = () => {
-    // Clear the planner content
-    planner.innerHTML = "";
-
-    // Get the week range for the current date
-    const weekRange = getWeekRange(currentDate);
-
-    // Update the week title
-    weekTitle.textContent = formatWeekTitle(weekRange);
-
-    // Fetch saved data from localStorage or initialize an empty object
-    const savedData = JSON.parse(localStorage.getItem(getStorageKey(weekRange))) || {};
-
-    // Define days of the week
-    const days = [
-        "Lunedì", "Martedì", "Mercoledì", "Giovedì",
-        "Venerdì", "Sabato", "Domenica"
-    ];
-
-    // Create planner content dynamically
-    days.forEach((day, index) => {
-        const dayDiv = document.createElement("div");
-        dayDiv.classList.add("day");
-
-        // Add day header
-        const dayHeader = document.createElement("h2");
-        dayHeader.textContent = day;
-        dayDiv.appendChild(dayHeader);
-
-        // Add time boxes for the day
-        ["MATTINA", "POMERIGGIO", "SERA", "NOTTE"].forEach((time) => {
-            const timeBox = document.createElement("div");
-            timeBox.classList.add("time-box");
-            timeBox.textContent = time;
-
-            // Apply saved color if it exists
-            const savedColor = savedData[`${day}-${time}`];
-            if (savedColor) {
-                timeBox.classList.add(savedColor);
-            }
-
-            // Handle click event to cycle colors
-            timeBox.addEventListener("click", () => {
-                // Define color sequence
-                const colors = ["white", "blue", "orange", "red"];
-                const currentColor = colors.find((color) => timeBox.classList.contains(color)) || "white";
-                const nextColor = colors[(colors.indexOf(currentColor) + 1) % colors.length];
-
-                // Update classes
-                timeBox.className = "time-box"; // Reset to base class
-                if (nextColor !== "white") {
-                    timeBox.classList.add(nextColor);
-                }
-
-                // Save the new color in localStorage
-                const updatedData = JSON.parse(localStorage.getItem(getStorageKey(weekRange))) || {};
-                updatedData[`${day}-${time}`] = nextColor !== "white" ? nextColor : null;
-                localStorage.setItem(getStorageKey(weekRange), JSON.stringify(updatedData));
-            });
-
-            dayDiv.appendChild(timeBox);
-        });
-
-        planner.appendChild(dayDiv);
+// Load weekly planner data for the given week
+async function loadWeeklyPlanner(weekRange) {
+  try {
+    const range = `'${weekRange}'!A1:E10`;
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
     });
-};
 
-// Helper to get localStorage key for the current week
-const getStorageKey = (weekRange) => `planner-${weekRange.start.toISOString().split("T")[0]}-${weekRange.end.toISOString().split("T")[0]}`;
+    plannerData = response.result.values || [];
+    renderPlanner(weekRange);
+  } catch (error) {
+    console.error("Error loading weekly planner:", error);
+    plannerData = []; // Default empty planner
+    renderPlanner(weekRange);
+  }
+}
 
-// Handle week navigation
-prevWeek.addEventListener("click", () => {
-    currentDate.setDate(currentDate.getDate() - 7); // Move back one week
-    loadPlanner();
+// Save updated planner data back to Google Sheets
+async function saveWeeklyPlanner(weekRange) {
+  const range = `'${weekRange}'!A1:E10`;
+  const body = {
+    values: plannerData,
+  };
+
+  try {
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+      valueInputOption: 'RAW',
+      resource: body,
+    });
+    console.log('Planner saved successfully.');
+  } catch (error) {
+    console.error("Error saving planner:", error);
+  }
+}
+
+// Render the planner UI
+function renderPlanner(weekRange) {
+  const planner = document.getElementById('planner');
+  planner.innerHTML = ''; // Clear previous content
+
+  const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+  days.forEach((day, i) => {
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'day';
+    const dayHeader = document.createElement('h3');
+    dayHeader.textContent = day;
+
+    dayDiv.appendChild(dayHeader);
+
+    const timeSlots = ['Mattina', 'Pomeriggio', 'Sera', 'Notte'];
+    timeSlots.forEach((slot, j) => {
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'slot';
+      slotDiv.textContent = slot;
+
+      // Set initial color
+      slotDiv.style.backgroundColor = plannerData[i]?.[j] || 'white';
+
+      slotDiv.addEventListener('click', () => {
+        const colors = ['white', 'blue', 'orange', 'red'];
+        const currentColor = slotDiv.style.backgroundColor;
+        const nextColor = colors[(colors.indexOf(currentColor) + 1) % colors.length];
+
+        slotDiv.style.backgroundColor = nextColor;
+        if (!plannerData[i]) plannerData[i] = [];
+        plannerData[i][j] = nextColor;
+
+        saveWeeklyPlanner(weekRange);
+      });
+
+      dayDiv.appendChild(slotDiv);
+    });
+
+    planner.appendChild(dayDiv);
+  });
+
+  document.getElementById('week-display').textContent = `Settimana ${weekRange}`;
+}
+
+// Get the current week's range (e.g., "2-8 dicembre 2024")
+function getCurrentWeekRange() {
+  const today = new Date();
+  const monday = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Start of the week
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6); // End of the week
+
+  const options = { day: '2-digit', month: 'long' };
+  return `${monday.toLocaleDateString('it-IT', options)} - ${sunday.toLocaleDateString('it-IT', options)}`;
+}
+
+// Navigation buttons for changing weeks
+document.getElementById('prev-week').addEventListener('click', () => {
+  changeWeek(-1);
+});
+document.getElementById('next-week').addEventListener('click', () => {
+  changeWeek(1);
 });
 
-nextWeek.addEventListener("click", () => {
-    currentDate.setDate(currentDate.getDate() + 7); // Move forward one week
-    loadPlanner();
-});
+function changeWeek(offset) {
+  const currentWeek = getCurrentWeekRange();
+  const monday = new Date(currentWeek.split(' ')[0]);
+  monday.setDate(monday.getDate() + offset * 7);
 
-// Initial load of the planner
-loadPlanner();
-
+  const newWeekRange = `${monday.toLocaleDateString('it-IT')} - ${new Date(monday.setDate(monday.getDate() + 6)).toLocaleDateString('it-IT')}`;
+  loadWeeklyPlanner(newWeekRange);
+}
