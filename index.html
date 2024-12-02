@@ -75,7 +75,7 @@
     <script>
         const colors = ['white', 'blue', 'orange', 'red'];
         const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';  // Read and write access
-        const spreadsheetId = 'YOUR_SHEET_ID';  // Replace with your sheet ID
+        const spreadsheetId = '1K90XFVzRNvBbvOo8SfcdDo5KDHE9Tk9aMxP8XevhVZM';  // Replace with your sheet ID
 
         // Function to get the current week range (e.g., 2nd to 8th December, 2024)
         function getCurrentWeekRange() {
@@ -107,8 +107,8 @@
         // Function to authenticate Google API and initialize Sheets API
         function start() {
             gapi.client.init({
-                'apiKey': 'YOUR_API_KEY',  // Add your API key here
-                'clientId': 'YOUR_CLIENT_ID',  // Add your Client ID here
+                'apiKey': 'AIzaSyCF2HZo60YJ9AXjWc79isscfwDgW2qzwmc',  // Add your API key here
+                'clientId': '786045326849-4524vek5urhk3lkdpml0kvqev2gboc1l.apps.googleusercontent.com',  // Add your Client ID here
                 'scope': SCOPE,
                 'discoveryDocs': ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
             }).then(function () {
