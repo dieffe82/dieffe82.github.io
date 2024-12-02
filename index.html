@@ -9,157 +9,160 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #f7f7f7;
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
+        header, footer {
             background-color: #4CAF50;
             color: white;
+            text-align: center;
+            padding: 10px 0;
         }
-        .header button {
-            background-color: white;
-            border: none;
-            color: #4CAF50;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 1rem;
+        header h1, footer p {
+            margin: 0;
         }
         .container {
-            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin: 20px;
         }
         .day {
-            margin-bottom: 20px;
-        }
-        .day h3 {
-            margin-bottom: 5px;
-        }
-        .day div {
-            border: 1px solid #ccc;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
             padding: 10px;
-            margin-bottom: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .day h2 {
+            text-align: center;
+            margin: 0 0 10px;
+        }
+        .time-slot {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
             cursor: pointer;
         }
-        .footer {
-            padding: 10px;
-            background-color: #f1f1f1;
-            text-align: center;
-            font-size: 0.9rem;
+        .time-slot.blue { background-color: #2196F3; color: white; }
+        .time-slot.orange { background-color: #FF9800; color: white; }
+        .time-slot.red { background-color: #F44336; color: white; }
+        footer {
+            margin-top: 20px;
         }
-        .footer p {
-            margin: 5px 0;
+        footer .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
         }
+        footer .legend div {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        footer .legend div span {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+        footer .legend div span.blue { background-color: #2196F3; }
+        footer .legend div span.orange { background-color: #FF9800; }
+        footer .legend div span.red { background-color: #F44336; }
+        footer .legend div span.white { background-color: white; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <button id="prevWeek">← Settimana precedente</button>
-        <h1 id="currentWeek"></h1>
-        <button id="nextWeek">Settimana successiva →</button>
-    </div>
-    <div class="container" id="plannerContainer">
-        <!-- Days will be dynamically populated here -->
-    </div>
-    <div class="footer">
-        <p>Legenda:</p>
-        <p>Blu = Marco, Arancione = Laura, Rosso = Abies, Bianco = Non prenotato</p>
-    </div>
+    <header>
+        <h1 id="week-title">Settimana</h1>
+        <button id="prev-week">&larr; Settimana Precedente</button>
+        <button id="next-week">Settimana Successiva &rarr;</button>
+    </header>
+    <main>
+        <div class="container" id="planner-container"></div>
+    </main>
+    <footer>
+        <div class="legend">
+            <div><span class="blue"></span> Marco</div>
+            <div><span class="orange"></span> Laura</div>
+            <div><span class="red"></span> Abies</div>
+            <div><span class="white"></span> Non prenotato</div>
+        </div>
+    </footer>
     <script>
         const CLIENT_ID = '786045326849-4524vek5urhk3lkdpml0kvqev2gboc1l.apps.googleusercontent.com';
         const API_KEY = 'AIzaSyCF2HZo60YJ9AXjWc79isscfwDgW2qzwmc';
-        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-        const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 
-        let currentWeekStartDate;
+        const days = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
+        const timeSlots = ["Mattina", "Pomeriggio", "Sera", "Notte"];
+        let currentWeek = new Date();
 
-        function handleClientLoad() {
-            gapi.load('client:auth2', initClient);
+        function getMonday(d) {
+            d = new Date(d);
+            const day = d.getDay(),
+                diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday (day 1)
+            return new Date(d.setDate(diff));
         }
 
-        function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                clientId: CLIENT_ID,
-                discoveryDocs: [DISCOVERY_DOC],
-                scope: SCOPES
-            }).then(() => {
-                console.log("Google API initialized.");
-                loadWeek(new Date());
-            }).catch(error => {
-                console.error("Error initializing API client:", error);
-            });
+        function formatWeekRange(date) {
+            const monday = getMonday(date);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+
+            const options = { day: '2-digit', month: '2-digit' };
+            return `${monday.toLocaleDateString('it-IT', options)} - ${sunday.toLocaleDateString('it-IT', options)}`;
         }
 
-        function loadWeek(date) {
-            // Set the week based on the given date
-            const monday = new Date(date);
-            monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)); // Adjust to Monday
+        function updatePlanner() {
+            const plannerContainer = document.getElementById("planner-container");
+            const weekTitle = document.getElementById("week-title");
 
-            currentWeekStartDate = monday;
-
-            const weekText = `${monday.toLocaleDateString('it-IT')} - ${new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('it-IT')}`;
-            document.getElementById('currentWeek').textContent = weekText;
-
-            loadWeekData(monday);
-        }
-
-        function loadWeekData(startDate) {
-            // Example of how to read/write data from/to Google Sheets
-            const sheetName = `${startDate.toISOString().slice(0, 10)}`;
-            console.log(`Loading data for the week starting ${sheetName}`);
-            // Fetch or create data here using the Sheets API
-        }
-
-        function setupPlanner() {
-            const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-            const container = document.getElementById('plannerContainer');
-            container.innerHTML = '';
+            weekTitle.textContent = `Settimana ${formatWeekRange(currentWeek)}`;
+            plannerContainer.innerHTML = "";
 
             days.forEach(day => {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'day';
+                const dayDiv = document.createElement("div");
+                dayDiv.className = "day";
+                const dayTitle = document.createElement("h2");
+                dayTitle.textContent = day;
+                dayDiv.appendChild(dayTitle);
 
-                const header = document.createElement('h3');
-                header.textContent = day;
-
-                const slots = ['Mattina', 'Pomeriggio', 'Sera', 'Notte'];
-                dayDiv.appendChild(header);
-
-                slots.forEach(slot => {
-                    const slotDiv = document.createElement('div');
+                timeSlots.forEach(slot => {
+                    const slotDiv = document.createElement("div");
+                    slotDiv.className = "time-slot";
                     slotDiv.textContent = slot;
-                    slotDiv.addEventListener('click', () => {
-                        cycleColor(slotDiv);
-                    });
+                    slotDiv.onclick = () => {
+                        if (slotDiv.classList.contains("blue")) slotDiv.className = "time-slot orange";
+                        else if (slotDiv.classList.contains("orange")) slotDiv.className = "time-slot red";
+                        else if (slotDiv.classList.contains("red")) slotDiv.className = "time-slot";
+                        else slotDiv.className = "time-slot blue";
+                    };
                     dayDiv.appendChild(slotDiv);
                 });
 
-                container.appendChild(dayDiv);
+                plannerContainer.appendChild(dayDiv);
             });
         }
 
-        function cycleColor(element) {
-            const colors = ['', 'blue', 'orange', 'red'];
-            const currentColor = element.style.backgroundColor;
-            const nextColor = colors[(colors.indexOf(currentColor) + 1) % colors.length];
-            element.style.backgroundColor = nextColor;
-        }
+        document.getElementById("prev-week").onclick = () => {
+            currentWeek.setDate(currentWeek.getDate() - 7);
+            updatePlanner();
+        };
 
-        document.getElementById('prevWeek').addEventListener('click', () => {
-            const previousWeek = new Date(currentWeekStartDate);
-            previousWeek.setDate(previousWeek.getDate() - 7);
-            loadWeek(previousWeek);
+        document.getElementById("next-week").onclick = () => {
+            currentWeek.setDate(currentWeek.getDate() + 7);
+            updatePlanner();
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updatePlanner();
         });
-
-        document.getElementById('nextWeek').addEventListener('click', () => {
-            const nextWeek = new Date(currentWeekStartDate);
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            loadWeek(nextWeek);
-        });
-
-        setupPlanner();
     </script>
-    <script src="https://apis.google.com/js/api.js" onload="handleClientLoad()"></script>
 </body>
 </html>
+
