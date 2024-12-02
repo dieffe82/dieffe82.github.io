@@ -4,26 +4,204 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Planner</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .day { margin: 20px; }
+        .time-box { width: 100px; height: 100px; border: 1px solid #ccc; margin: 5px; display: inline-block; cursor: pointer; }
+        #weekHeader { font-size: 20px; }
+        footer { font-size: 12px; color: gray; }
+    </style>
 </head>
 <body>
-    <header>
-        <button id="prev-week">&larr;</button>
-        <h1 id="week-title">Week 1</h1>
-        <button id="next-week">&rarr;</button>
-    </header>
-    <div class="planner" id="planner">
-        <!-- Weekly planner content will be dynamically loaded here -->
+    <h1>Weekly Planner</h1>
+    <div id="weekHeader"></div>
+
+    <!-- Days of the Week -->
+    <div id="monday" class="day">
+        <h2>Lunedì</h2>
+        <div class="time-box" onclick="changeColor('monday', 0)"></div>
+        <div class="time-box" onclick="changeColor('monday', 1)"></div>
+        <div class="time-box" onclick="changeColor('monday', 2)"></div>
+        <div class="time-box" onclick="changeColor('monday', 3)"></div>
     </div>
+    <div id="tuesday" class="day">
+        <h2>Martedì</h2>
+        <div class="time-box" onclick="changeColor('tuesday', 0)"></div>
+        <div class="time-box" onclick="changeColor('tuesday', 1)"></div>
+        <div class="time-box" onclick="changeColor('tuesday', 2)"></div>
+        <div class="time-box" onclick="changeColor('tuesday', 3)"></div>
+    </div>
+    <div id="wednesday" class="day">
+        <h2>Mercoledì</h2>
+        <div class="time-box" onclick="changeColor('wednesday', 0)"></div>
+        <div class="time-box" onclick="changeColor('wednesday', 1)"></div>
+        <div class="time-box" onclick="changeColor('wednesday', 2)"></div>
+        <div class="time-box" onclick="changeColor('wednesday', 3)"></div>
+    </div>
+    <div id="thursday" class="day">
+        <h2>Giovedì</h2>
+        <div class="time-box" onclick="changeColor('thursday', 0)"></div>
+        <div class="time-box" onclick="changeColor('thursday', 1)"></div>
+        <div class="time-box" onclick="changeColor('thursday', 2)"></div>
+        <div class="time-box" onclick="changeColor('thursday', 3)"></div>
+    </div>
+    <div id="friday" class="day">
+        <h2>Venerdì</h2>
+        <div class="time-box" onclick="changeColor('friday', 0)"></div>
+        <div class="time-box" onclick="changeColor('friday', 1)"></div>
+        <div class="time-box" onclick="changeColor('friday', 2)"></div>
+        <div class="time-box" onclick="changeColor('friday', 3)"></div>
+    </div>
+    <div id="saturday" class="day">
+        <h2>Sabato</h2>
+        <div class="time-box" onclick="changeColor('saturday', 0)"></div>
+        <div class="time-box" onclick="changeColor('saturday', 1)"></div>
+        <div class="time-box" onclick="changeColor('saturday', 2)"></div>
+        <div class="time-box" onclick="changeColor('saturday', 3)"></div>
+    </div>
+    <div id="sunday" class="day">
+        <h2>Domenica</h2>
+        <div class="time-box" onclick="changeColor('sunday', 0)"></div>
+        <div class="time-box" onclick="changeColor('sunday', 1)"></div>
+        <div class="time-box" onclick="changeColor('sunday', 2)"></div>
+        <div class="time-box" onclick="changeColor('sunday', 3)"></div>
+    </div>
+
+    <!-- Footer with Legend -->
     <footer>
-        <div class="legend">
-            <div class="color-box blue"></div> Marco
-            <div class="color-box orange"></div> Laura
-            <div class="color-box red"></div> Abies
-            <div class="color-box white"></div> Not booked
-        </div>
+        <p><strong>Legend:</strong><br>Blue = Marco, Orange = Laura, Red = Abies, White = Not booked.</p>
     </footer>
-    <script src="script.js"></script>
+
+    <script>
+        const colors = ['white', 'blue', 'orange', 'red'];
+        const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';  // Read and write access
+        const spreadsheetId = 'YOUR_SHEET_ID';  // Replace with your sheet ID
+
+        // Function to get the current week range (e.g., 2nd to 8th December, 2024)
+        function getCurrentWeekRange() {
+            const currentDate = new Date();
+            const currentDay = currentDate.getDate();
+            const dayOfWeek = currentDate.getDay(); // Sunday - Saturday : 0 - 6
+            const startOfWeek = new Date(currentDate.setDate(currentDay - dayOfWeek)); // Sunday
+            const endOfWeek = new Date(currentDate.setDate(startOfWeek.getDate() + 6)); // Saturday
+
+            const start = startOfWeek.toLocaleDateString();
+            const end = endOfWeek.toLocaleDateString();
+            return `Dal ${start} al ${end}`;
+        }
+
+        // Function to get the current week number
+        function getCurrentWeekNumber() {
+            const currentDate = new Date();
+            const startDate = new Date(currentDate.getFullYear(), 0, 1);
+            const days = Math.floor((currentDate - startDate) / (24 * 60 * 60 * 1000));
+            return Math.ceil((days + 1) / 7);
+        }
+
+        // Display current week range in the header
+        function setWeekHeader() {
+            const weekRange = getCurrentWeekRange();
+            document.getElementById("weekHeader").textContent = `Settimana: ${weekRange}`;
+        }
+
+        // Function to authenticate Google API and initialize Sheets API
+        function start() {
+            gapi.client.init({
+                'apiKey': 'YOUR_API_KEY',  // Add your API key here
+                'clientId': 'YOUR_CLIENT_ID',  // Add your Client ID here
+                'scope': SCOPE,
+                'discoveryDocs': ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+            }).then(function () {
+                if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                    listData();  // Load data if already signed in
+                } else {
+                    gapi.auth2.getAuthInstance().signIn();  // Ask to sign in
+                }
+            });
+        }
+
+        // Check if data for the current week exists; if not, create it with all days set to white
+        function createOrFetchWeekData() {
+            const weekNumber = getCurrentWeekNumber();  // Get current week number
+            const range = `Week ${weekNumber}!A2:E`;  // Check if data exists for this week
+
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: spreadsheetId,
+                range: range,
+            }).then(function (response) {
+                if (!response.result.values || response.result.values.length === 0) {
+                    // If no data exists, create it with all days set to white
+                    createWeekData();
+                } else {
+                    updateUI(response.result.values);  // Update UI with fetched data
+                }
+            });
+        }
+
+        // Create data for the week with all days set to white
+        function createWeekData() {
+            const weekNumber = getCurrentWeekNumber();  // Get current week number
+            const range = `Week ${weekNumber}!A2:E`;  // Set range for the current week
+
+            const values = [
+                ['Lunedì', 'white', 'white', 'white', 'white'],
+                ['Martedì', 'white', 'white', 'white', 'white'],
+                ['Mercoledì', 'white', 'white', 'white', 'white'],
+                ['Giovedì', 'white', 'white', 'white', 'white'],
+                ['Venerdì', 'white', 'white', 'white', 'white'],
+                ['Sabato', 'white', 'white', 'white', 'white'],
+                ['Domenica', 'white', 'white', 'white', 'white']
+            ];
+
+            gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: spreadsheetId,
+                range: range,
+                valueInputOption: 'RAW',
+                resource: { values: values },
+            }).then(function () {
+                listData();  // Reload data after creating it
+            });
+        }
+
+        // Update the UI with fetched data
+        function updateUI(rows) {
+            rows.forEach((row, index) => {
+                const day = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][index];
+                const timeBoxes = document.querySelectorAll(`#${day} .time-box`);
+                timeBoxes.forEach((box, i) => {
+                    box.style.backgroundColor = row[i + 1]; // Fill boxes with corresponding colors
+                });
+            });
+        }
+
+        // Change the color of a time-box on click and update Google Sheets
+        function changeColor(day, index) {
+            const color = colors[(colors.indexOf(document.querySelector(`#${day} .time-box:nth-child(${index + 1})`).style.backgroundColor) + 1) % colors.length];
+            document.querySelector(`#${day} .time-box:nth-child(${index + 1})`).style.backgroundColor = color;
+            saveDataToGoogleSheet(day, index, color);
+        }
+
+        // Save the updated color to Google Sheets
+        function saveDataToGoogleSheet(day, index, color) {
+            const weekNumber = getCurrentWeekNumber();
+            const range = `Week ${weekNumber}!A${index + 2}:E${index + 2}`;
+            const dayIndex = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].indexOf(day) + 1;
+            const values = [[day, ...Array(4).fill('white').map((_, i) => i === index ? color : 'white')]];
+
+            gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: spreadsheetId,
+                range: range,
+                valueInputOption: 'RAW',
+                resource: { values: values },
+            }).then(function () {
+                console.log("Updated sheet with color change.");
+            });
+        }
+
+        // Initialize the app after Google API is loaded
+        gapi.load('client:auth2', start);
+
+    </script>
+
 </body>
 </html>
-
