@@ -5,7 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planner Settimanale</title>
     <style>
-        /* Same styles as before */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+        header, footer {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+        }
+        header h1, footer p {
+            margin: 0;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin: 20px;
+        }
+        .day {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .day h2 {
+            text-align: center;
+            margin: 0 0 10px;
+        }
+        .time-slot {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .time-slot.blue { background-color: #2196F3; color: white; }
+        .time-slot.orange { background-color: #FF9800; color: white; }
+        .time-slot.red { background-color: #F44336; color: white; }
+        footer {
+            margin-top: 20px;
+        }
+        footer .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        footer .legend div {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        footer .legend div span {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+        footer .legend div span.blue { background-color: #2196F3; }
+        footer .legend div span.orange { background-color: #FF9800; }
+        footer .legend div span.red { background-color: #F44336; }
+        footer .legend div span.white { background-color: white; border: 1px solid #ccc; }
+
     </style>
 </head>
 <body>
