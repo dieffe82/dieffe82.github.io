@@ -1,129 +1,163 @@
-/* styles.css */
+/* General Reset */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f0f0f0;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
 }
 
+/* Header */
 header {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    background-color: #007bff;
-    color: white;
-    width: 100%;
-    padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
 }
 
 header button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 5px;
+  background-color: white;
+  color: #007bff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+header button:hover {
+  background-color: #0056b3;
+  color: white;
 }
 
 header h1 {
-    font-size: 24px;
-    margin: 0;
+  margin: 0;
+  font-size: 20px;
 }
 
-.planner {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-    padding: 20px;
-    width: 100%;
-    max-width: 1200px;
+/* Main Planner */
+main#planner {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  padding: 20px;
 }
 
 .day {
-    background: #ffffff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    width: 150px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    text-align: center;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.day h2 {
-    font-size: 18px;
-    margin-bottom: 10px;
-    color: #333;
+.day h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #007bff;
 }
 
-.time-box {
-    margin: 5px 0;
-    padding: 10px;
-    text-align: center;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: white;
-    color: #333;
-    cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease;
+.slot {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 10px;
+  margin: 5px 0;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
-/* Colors for clicked states */
-.time-box.blue {
-    background-color: #007bff;
-    color: white;
+.slot:hover {
+  border-color: #007bff;
 }
 
-.time-box.orange {
-    background-color: #ffa500;
-    color: white;
+/* Colors */
+.slot.blue {
+  background-color: #007bff;
+  color: white;
 }
 
-.time-box.red {
-    background-color: #ff4d4d;
-    color: white;
+.slot.orange {
+  background-color: #ffa500;
+  color: white;
 }
 
-/* Footer and Legend */
+.slot.red {
+  background-color: #ff0000;
+  color: white;
+}
+
+.slot.white {
+  background-color: white;
+  color: #333;
+}
+
+/* Footer */
 footer {
-    background-color: #007bff;
-    color: white;
-    width: 100%;
-    padding: 10px;
-    text-align: center;
+  background-color: #f1f1f1;
+  padding: 10px 20px;
+  text-align: center;
+  border-top: 1px solid #ddd;
 }
 
-.legend {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
+footer .legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+footer .legend .color {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+}
+
+footer .legend .blue {
+  background-color: #007bff;
+}
+
+footer .legend .orange {
+  background-color: #ffa500;
+}
+
+footer .legend .red {
+  background-color: #ff0000;
+}
+
+footer .legend .white {
+  background-color: white;
+  border: 1px solid #ddd;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  main#planner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  header h1 {
     font-size: 16px;
-}
+  }
 
-.legend .color-box {
-    width: 20px;
-    height: 20px;
-    display: inline-block;
-    border: 1px solid white;
-}
+  header button {
+    font-size: 14px;
+    padding: 5px;
+  }
 
-.legend .blue {
-    background-color: #007bff;
-}
+  main#planner {
+    grid-template-columns: 1fr;
+  }
 
-.legend .orange {
-    background-color: #ffa500;
-}
-
-.legend .red {
-    background-color: #ff4d4d;
-}
-
-.legend .white {
-    background-color: white;
+  .slot {
+    font-size: 14px;
+  }
 }
