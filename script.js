@@ -93,4 +93,49 @@ function renderPlanner(weekRange) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'planner-row';
 
-    ro
+    row.forEach((cell, index) => {
+      const cellDiv = document.createElement('div');
+      cellDiv.className = index === 0 ? 'planner-cell day' : 'planner-cell slot';
+      cellDiv.style.backgroundColor = index === 0 ? '' : cell;
+      cellDiv.textContent = index === 0 ? cell : '';
+      rowDiv.appendChild(cellDiv);
+
+      // Handle color changes
+      if (index > 0) {
+        cellDiv.addEventListener('click', () => {
+          const colors = ['white', 'blue', 'orange', 'red'];
+          const currentColor = cellDiv.style.backgroundColor;
+          const nextColor = colors[(colors.indexOf(currentColor) + 1) % colors.length];
+          cellDiv.style.backgroundColor = nextColor;
+          plannerData[row[0]][index - 1] = nextColor;
+        });
+      }
+    });
+
+    plannerContainer.appendChild(rowDiv);
+  });
+}
+
+// Get current week range
+function getCurrentWeekRange() {
+  const today = new Date();
+  const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+  const options = { day: 'numeric', month: 'long', year: 'numeric' };
+  return `${startOfWeek.toLocaleDateString('it-IT', options)} - ${endOfWeek.toLocaleDateString('it-IT', options)}`;
+}
+
+// Google Sign-In setup
+window.onload = function () {
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredentialResponse,
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('sign-in-container'),
+    { theme: 'outline', size: 'large' }
+  );
+};
+
