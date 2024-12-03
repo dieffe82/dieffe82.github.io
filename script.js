@@ -17,19 +17,24 @@ async function handleCredentialResponse(response) {
   }
 }
 
-// Initialize Google Sheets API client
+// Initialize Google API client
 async function initializeGoogleAPI() {
   try {
-    await gapi.load('client:auth2', () => {
-      gapi.auth2.init({
+    await gapi.load('client:auth2', async () => {
+      await gapi.auth2.init({
         client_id: CLIENT_ID,
         apiKey: API_KEY,
         discoveryDocs: DISCOVERY_DOCS,
         scope: 'https://www.googleapis.com/auth/spreadsheets',
       });
-    });
 
-    console.log("Google API client initialized");
+      await gapi.client.init({
+        apiKey: API_KEY,
+        discoveryDocs: DISCOVERY_DOCS,
+      });
+
+      console.log("Google API client initialized successfully!");
+    });
   } catch (error) {
     console.error("Error initializing Google API client:", error);
   }
@@ -41,6 +46,7 @@ async function loadWeeklyPlanner() {
     const weekRange = getCurrentWeekRange(); // Get the current week (e.g., 2nd-8th December 2024)
     const range = `'${weekRange}'!A1:E10`;
 
+    // Fetch data from the Google Sheet
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: range,
@@ -75,6 +81,7 @@ async function saveWeeklyPlanner() {
       values: plannerData,
     };
 
+    // Save data back to Google Sheets
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: range,
