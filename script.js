@@ -17,7 +17,6 @@ async function handleCredentialResponse(response) {
   }
 }
 
-// Initialize Google API client
 async function initializeGoogleAPI() {
   try {
     await gapi.load('client:auth2', async () => {
@@ -40,9 +39,14 @@ async function initializeGoogleAPI() {
   }
 }
 
-// Load the planner data from Google Sheets
 async function loadWeeklyPlanner() {
   try {
+    // Ensure Sheets API is loaded
+    if (!gapi.client.sheets) {
+      console.error("Sheets API is not loaded. Initializing again...");
+      await initializeGoogleAPI();
+    }
+
     const weekRange = getCurrentWeekRange(); // Get the current week (e.g., 2nd-8th December 2024)
     const range = `'${weekRange}'!A1:E10`;
 
@@ -52,7 +56,7 @@ async function loadWeeklyPlanner() {
       range: range,
     });
 
-    if (response.result.values) {
+    if (response.result && response.result.values) {
       plannerData = response.result.values;
     } else {
       plannerData = createEmptyPlanner();
@@ -63,7 +67,6 @@ async function loadWeeklyPlanner() {
     console.error("Error loading data from Google Sheets:", error);
   }
 }
-
 // Create an empty planner with default "white" values
 function createEmptyPlanner() {
   const days = 7; // 7 days in a week
