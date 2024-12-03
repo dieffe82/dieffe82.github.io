@@ -5,82 +5,81 @@ const DISCOVERY_DOCS = ['https://sheets.googleapis.com/$discovery/rest?version=v
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
 let plannerData = {};
+let tokenClient;
+let gapiInitialized = false;
+let gisInitialized = false;
 
-// Initialize Google Sign-In
-function handleCredentialResponse(response) {
-  const user = jwt_decode(response.credential);
-  console.log("User Info:", user);
-
-  // Update the UI to show the planner after login
-  document.getElementById('sign-in-container').style.display = 'none';
-  document.getElementById('planner-container').style.display = 'block';
-
-  // Initialize Google API client
-  initializeGoogleAPI().then(loadWeeklyPlanner).catch((err) => {
-    console.error("Initialization error:", err);
-  });
-}
-
-async function initializeGoogleAPI() {
-  return new Promise((resolve, reject) => {
-    gapi.load('client', async () => {
-      try {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          clientId: CLIENT_ID,
-          discoveryDocs: DISCOVERY_DOCS,
-          scope: SCOPES,
-        });
-        console.log("Google API client initialized successfully.");
-        resolve();
-      } catch (error) {
-        console.error("Error initializing Google API client:", error);
-        reject(error);
-      }
+// Initialize GAPI client
+async function initializeGapiClient() {
+  await gapi.load('client', async () => {
+    await gapi.client.init({
+      apiKey: API_KEY,
+      discoveryDocs: DISCOVERY_DOCS,
     });
+    gapiInitialized = true;
+    console.log('Google API client initialized.');
   });
 }
 
+// Initialize Google Identity Services
+function initializeGISClient() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (response) => {
+      if (response.error) {
+        console.error('Error during token acquisition:', response.error);
+        return;
+      }
+      console.log('Access token acquired.');
+      loadWeeklyPlanner(); // Load data after successful login
+    },
+  });
+  gisInitialized = true;
+  console.log('Google Identity Services client initialized.');
+}
+
+// Handle login button click
+function handleLogin() {
+  if (gapiInitialized && gisInitialized) {
+    tokenClient.requestAccessToken();
+  } else {
+    console.error('Clients are not initialized.');
+  }
+}
+
+// Load weekly planner data from Google Sheets
 async function loadWeeklyPlanner() {
   try {
-    if (!gapi.client.sheets) {
-      throw new Error("Google Sheets API client is not initialized.");
-    }
+    if (!gapiInitialized) throw new Error('Google API client is not initialized.');
+    if (!gisInitialized) throw new Error('Google Identity Services client is not initialized.');
 
-    const weekRange = getCurrentWeekRange(); // Get the current week range
+    const weekRange = getCurrentWeekRange();
     const range = `'${weekRange}'!A1:E10`;
 
-    // Fetch data from the Google Sheet
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: range,
     });
 
-    if (response.result && response.result.values) {
-      plannerData = response.result.values;
-    } else {
-      plannerData = createEmptyPlanner();
-    }
-
+    plannerData = response.result.values || createEmptyPlanner();
     renderPlanner(weekRange);
   } catch (error) {
-    console.error("Error loading data from Google Sheets:", error);
+    console.error('Error loading data from Google Sheets:', error);
   }
 }
 
-// Generate default empty planner
+// Create default empty planner
 function createEmptyPlanner() {
   const emptyData = [];
   const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-  const slots = 4; // MATTINA, POMERIGGIO, SERA, NOTTE
   for (const day of days) {
-    const row = new Array(slots).fill('white');
-    emptyData.push([day, ...row]);
+    emptyData.push([day, 'white', 'white', 'white', 'white']); // 4 slots
   }
   return emptyData;
 }
 
-// Render the weekly planner on the UI
+// Render the planner in the UI
 function renderPlanner(weekRange) {
   const plannerContainer = document.getElementById('planner');
   plannerContainer.innerHTML = ''; // Clear existing content
@@ -100,7 +99,6 @@ function renderPlanner(weekRange) {
       cellDiv.textContent = index === 0 ? cell : '';
       rowDiv.appendChild(cellDiv);
 
-      // Handle color changes
       if (index > 0) {
         cellDiv.addEventListener('click', () => {
           const colors = ['white', 'blue', 'orange', 'red'];
@@ -116,7 +114,7 @@ function renderPlanner(weekRange) {
   });
 }
 
-// Get current week range
+// Get the current week's range
 function getCurrentWeekRange() {
   const today = new Date();
   const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
@@ -127,15 +125,13 @@ function getCurrentWeekRange() {
   return `${startOfWeek.toLocaleDateString('it-IT', options)} - ${endOfWeek.toLocaleDateString('it-IT', options)}`;
 }
 
-// Google Sign-In setup
-window.onload = function () {
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredentialResponse,
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('sign-in-container'),
-    { theme: 'outline', size: 'large' }
-  );
+// Initialize everything on window load
+window.onload = async () => {
+  // Initialize GAPI and GIS clients
+  await initializeGapiClient();
+  initializeGISClient();
+
+  // Add login button handler
+  document.getElementById('login-button').addEventListener('click', handleLogin);
 };
 
