@@ -1,6 +1,6 @@
 let plannerData = {};
-const SPREADSHEET_ID = '1K90XFVzRNvBbvOo8SfcdDo5KDHE9Tk9aMxP8XevhVZM';
-const API_KEY = 'AIzaSyCF2HZo60YJ9AXjWc79isscfwDgW2qzwmc';
+const SPREADSHEET_ID = '';
+const API_KEY = '';
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
 async function handleCredentialResponse(response) {
