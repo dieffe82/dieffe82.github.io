@@ -8,6 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/platform.js?onload=init" async defer></script>
+   <script src="https://apis.google.com/js/api.js"></script>
+
   <script src="script.js" defer></script>
 
 
@@ -22,7 +24,14 @@
          data-callback="handleCredentialResponse"></div>
     <div class="g_id_signin" data-type="standard"></div>
   </header>
-  <main id="planner"></main>
+   <div id="sign-in-container">
+    <button id="login-button">Sign in with Google</button>
+  </div>
+  <div id="planner-container" style="display: none;">
+    <div id="planner"></div>
+  </div>
+
+ 
   <footer>
     <div class="legend">
       <span class="color blue"></span> Marco
