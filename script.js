@@ -4,6 +4,7 @@ const API_KEY = 'AIzaSyCF2HZo60YJ9AXjWc79isscfwDgW2qzwmc'; // Your actual API ke
 const CLIENT_ID = '786045326849-4524vek5urhk3lkdpml0kvqev2gboc1l.apps.googleusercontent.com'; // Your actual Client ID here
 const DISCOVERY_DOCS = ['https://sheets.googleapis.com/$discovery/rest?version=v4'];
 
+// Handle Google login response
 async function handleCredentialResponse(response) {
   try {
     const user = jwt_decode(response.credential); // Decode JWT to get user info
@@ -17,6 +18,7 @@ async function handleCredentialResponse(response) {
   }
 }
 
+// Initialize Google API client
 async function initializeGoogleAPI() {
   try {
     await gapi.load('client:auth2', async () => {
@@ -39,6 +41,7 @@ async function initializeGoogleAPI() {
   }
 }
 
+// Load the planner data from Google Sheets
 async function loadWeeklyPlanner() {
   try {
     // Ensure Sheets API is loaded
@@ -67,6 +70,7 @@ async function loadWeeklyPlanner() {
     console.error("Error loading data from Google Sheets:", error);
   }
 }
+
 // Create an empty planner with default "white" values
 function createEmptyPlanner() {
   const days = 7; // 7 days in a week
