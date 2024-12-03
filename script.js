@@ -4,22 +4,33 @@ const API_KEY = 'AIzaSyCF2HZo60YJ9AXjWc79isscfwDgW2qzwmc';
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
 async function handleCredentialResponse(response) {
-  const user = jwt_decode(response.credential);
-  console.log("User Info:", user);
+  try {
+    const user = jwt_decode(response.credential);
+    console.log("User Info:", user);
 
-  // Initialize Google Sheets API after login
-  await initializeSheetsAPI();
-  await loadWeeklyPlanner(getCurrentWeekRange());
+    // Initialize Google Sheets API after login
+    await initializeSheetsAPI();
+
+    // Load the current week's planner
+    const currentWeekRange = getCurrentWeekRange();
+    await loadWeeklyPlanner(currentWeekRange);
+  } catch (error) {
+    console.error("Error during login or initialization:", error);
+  }
 }
 
 // Initialize Google Sheets API
 async function initializeSheetsAPI() {
-  await gapi.load('client');
-  await gapi.client.init({
-    apiKey: API_KEY,
-    discoveryDocs: [DISCOVERY_DOC],
-  });
-  console.log('Google Sheets API Initialized');
+  try {
+    await gapi.load('client');
+    await gapi.client.init({
+      apiKey: API_KEY,
+      discoveryDocs: [DISCOVERY_DOC],
+    });
+    console.log('Google Sheets API Initialized');
+  } catch (error) {
+    console.error("Error initializing Google Sheets API:", error);
+  }
 }
 
 // Load weekly planner data for the given week
@@ -31,13 +42,20 @@ async function loadWeeklyPlanner(weekRange) {
       range,
     });
 
-    plannerData = response.result.values || [];
+    plannerData = response.result.values || createEmptyPlanner();
     renderPlanner(weekRange);
   } catch (error) {
-    console.error("Error loading weekly planner:", error);
-    plannerData = []; // Default empty planner
+    console.warn("No data for this week, initializing empty planner:", error);
+    plannerData = createEmptyPlanner();
     renderPlanner(weekRange);
   }
+}
+
+// Create an empty planner with default "white" values
+function createEmptyPlanner() {
+  const days = 7; // 7 days a week
+  const slots = 4; // Mattina, Pomeriggio, Sera, Notte
+  return Array.from({ length: days }, () => Array(slots).fill('white'));
 }
 
 // Save updated planner data back to Google Sheets
@@ -69,6 +87,7 @@ function renderPlanner(weekRange) {
   days.forEach((day, i) => {
     const dayDiv = document.createElement('div');
     dayDiv.className = 'day';
+
     const dayHeader = document.createElement('h3');
     dayHeader.textContent = day;
 
