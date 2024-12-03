@@ -1,45 +1,207 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weekly Planner</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/platform.js?onload=init" async defer></script>
-   <script src="https://apis.google.com/js/api.js"></script>
-
-  <script src="script.js" defer></script>
-
-
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f9f9f9;
+    }
+    #sign-in-container {
+      margin-top: 20vh;
+    }
+    #planner-container {
+      display: none;
+      width: 80%;
+      margin: 20px auto;
+    }
+    #planner {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .planner-row {
+      display: flex;
+    }
+    .planner-cell {
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #ddd;
+      flex: 1;
+      font-size: 16px;
+    }
+    .planner-cell.day {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    .planner-cell.slot {
+      cursor: pointer;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <button id="prev-week">&lt;</button>
-    <h1 id="week-display">Settimana</h1>
-    <button id="next-week">&gt;</button>
-    <div id="g_id_onload"
-         data-client_id="786045326849-4524vek5urhk3lkdpml0kvqev2gboc1l.apps.googleusercontent.com"
-         data-callback="handleCredentialResponse"></div>
-    <div class="g_id_signin" data-type="standard"></div>
-  </header>
-   <div id="sign-in-container">
+  <!-- Sign-In Container -->
+  <div id="sign-in-container">
     <button id="login-button">Sign in with Google</button>
   </div>
-  <div id="planner-container" style="display: none;">
+
+  <!-- Planner Container -->
+  <div id="planner-container">
     <div id="planner"></div>
   </div>
 
- 
-  <footer>
-    <div class="legend">
-      <span class="color blue"></span> Marco
-      <span class="color orange"></span> Laura
-      <span class="color red"></span> Abies
-      <span class="color white"></span> Non prenotato
-    </div>
-  </footer>
+  <!-- Google API and App Script -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <script>
+    // BEGIN SCRIPT
+    const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // Replace with your Google Sheets ID
+    const API_KEY = 'YOUR_API_KEY'; // Replace with your API Key
+    const CLIENT_ID = 'YOUR_CLIENT_ID'; // Replace with your Client ID
+    const DISCOVERY_DOCS = ['https://sheets.googleapis.com/$discovery/rest?version=v4'];
+    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+    let plannerData = {};
+    let tokenClient;
+    let gapiInitialized = false;
+    let gisInitialized = false;
+
+    async function initializeGapiClient() {
+      await gapi.load('client', async () => {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: DISCOVERY_DOCS,
+        });
+        gapiInitialized = true;
+        console.log('Google API client initialized.');
+      });
+    }
+
+    function initializeGISClient() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: (response) => {
+          if (response.error) {
+            console.error('Error during token acquisition:', response.error);
+            return;
+          }
+          console.log('Access token acquired.');
+          loadWeeklyPlanner();
+        },
+      });
+      gisInitialized = true;
+      console.log('Google Identity Services client initialized.');
+    }
+
+    function handleLogin() {
+      if (gapiInitialized && gisInitialized) {
+        tokenClient.requestAccessToken();
+      } else {
+        console.error('Clients are not initialized.');
+      }
+    }
+
+    async function loadWeeklyPlanner() {
+      try {
+        if (!gapiInitialized) throw new Error('Google API client is not initialized.');
+        if (!gisInitialized) throw new Error('Google Identity Services client is not initialized.');
+
+        const weekRange = getCurrentWeekRange();
+        const range = `'${weekRange}'!A1:E10`;
+
+        const response = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: range,
+        });
+
+        plannerData = response.result.values || createEmptyPlanner();
+        renderPlanner(weekRange);
+      } catch (error) {
+        console.error('Error loading data from Google Sheets:', error);
+      }
+    }
+
+    function createEmptyPlanner() {
+      const emptyData = [];
+      const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+      for (const day of days) {
+        emptyData.push([day, 'white', 'white', 'white', 'white']); // 4 slots
+      }
+      return emptyData;
+    }
+
+    function renderPlanner(weekRange) {
+      const plannerContainer = document.getElementById('planner');
+      plannerContainer.innerHTML = ''; // Clear existing content
+
+      const title = document.createElement('h2');
+      title.textContent = `Planner for ${weekRange}`;
+      plannerContainer.appendChild(title);
+
+      plannerData.forEach((row) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'planner-row';
+
+        row.forEach((cell, index) => {
+          const cellDiv = document.createElement('div');
+          cellDiv.className = index === 0 ? 'planner-cell day' : 'planner-cell slot';
+          cellDiv.style.backgroundColor = index === 0 ? '' : cell;
+          cellDiv.textContent = index === 0 ? cell : '';
+          rowDiv.appendChild(cellDiv);
+
+          if (index > 0) {
+            cellDiv.addEventListener('click', () => {
+              const colors = ['white', 'blue', 'orange', 'red'];
+              const currentColor = cellDiv.style.backgroundColor;
+              const nextColor = colors[(colors.indexOf(currentColor) + 1) % colors.length];
+              cellDiv.style.backgroundColor = nextColor;
+              plannerData[row[0]][index - 1] = nextColor;
+            });
+          }
+        });
+
+        plannerContainer.appendChild(rowDiv);
+      });
+    }
+
+    function getCurrentWeekRange() {
+      const today = new Date();
+      const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      return `${startOfWeek.toLocaleDateString('it-IT', options)} - ${endOfWeek.toLocaleDateString('it-IT', options)}`;
+    }
+
+    window.onload = async () => {
+      await initializeGapiClient();
+      initializeGISClient();
+
+      document.getElementById('login-button').addEventListener('click', handleLogin);
+    };
+  </script>
 </body>
 </html>
+
 
